@@ -30,3 +30,14 @@ options:
   -l, --log-file LOG_FILE
                         Chemin vers le fichier de log
 ```
+
+Exemple d'utilisation : 
+```bash
+python3 split-pdf.py original.pdf
+```
+va scinder le pdf en autant de fichiers qu’il contient de pages dans le répertoire "original_pages".
+
+```bash
+python3 notes2csv.py ./original_pages
+```
+va extraire toutes les datas des fichiers PDF du dossier et les enregistrer dans des fichiers CSV.
