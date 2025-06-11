@@ -101,7 +101,7 @@ def extraire_notes_vers_csv(pdf_path: str, output_dir: str) -> None:
             entetes = ['Matière','Note/Barème','Résultat','Session','Crédits']
             lignes = []
             for row in table_notes[1:]:
-                if not row or not row[0] or not any(tag in row[0] for tag in ('UE','JR','JS')):
+                if not row or not row[0] or not any(tag in row[0] for tag in ('UE','JR','JS','WR','WS','OPTIONS')):
                     continue
                 mat = row[0].replace('\n',' ').strip()
                 note = row[1].strip() if len(row)>1 and row[1] else 'N/A'
@@ -146,15 +146,15 @@ def main():
 
     # Collecte des fichiers PDF
     pdf_list = []
-    if os.path.isfile(args.input):
-        if args.input.lower().endswith('.pdf'):
-            pdf_list = [args.input]
-    elif os.path.isdir(args.input):
-        for fname in os.listdir(args.input):
+    if os.path.isfile(args.pdf_file):
+        if args.pdf_file.lower().endswith('.pdf'):
+            pdf_list = [args.pdf_file]
+    elif os.path.isdir(args.pdf_file):
+        for fname in os.listdir(args.pdf_file):
             if fname.lower().endswith('.pdf'):
-                pdf_list.append(os.path.join(args.input, fname))
+                pdf_list.append(os.path.join(args.pdf_file, fname))
     else:
-        print(f"Erreur : '{args.input}' n'existe pas.")
+        print(f"Erreur : '{args.pdf_file}' n'existe pas.")
         return
 
     if not pdf_list:
