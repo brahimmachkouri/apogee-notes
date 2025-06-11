@@ -18,8 +18,8 @@ from tqdm import tqdm # pour la barre de progression
 
 def get_formation_name(pdf_path: str) -> str:
     """
-    Ouvre le PDF avec PyMuPDF et extrait le nom de la formation,
-    situé entre le prénom-nom et la chaîne 'N° Etudiant'.
+    Ouvre le PDF avec PyMuPDF et extrait le nom
+    de la formation, situé entre le prénom-nom et la chaîne 'N° Etudiant'.
     """
     doc = fitz.open(pdf_path)
     page = doc.load_page(0)
@@ -55,9 +55,9 @@ def extraire_notes_vers_csv(pdf_path: str, output_dir: str) -> None:
 
     try:
         with pdfplumber.open(pdf_path) as pdf:
-            page = pdf.pages[0]
-            texte_page = page.extract_text(x_tolerance=2, y_tolerance=2)
-            all_tables = page.extract_tables()
+            # Extraction du texte de la première page pour les métadonnées
+            page0 = pdf.pages[0]
+            texte_page = page0.extract_text(x_tolerance=2, y_tolerance=2)
 
             # Extraction des métadonnées
             nom_prenom = num_etudiant = ine = date_naissance = lieu_naissance = "Inconnu"
@@ -75,40 +75,39 @@ def extraire_notes_vers_csv(pdf_path: str, output_dir: str) -> None:
                 m = re.search(r"INE\s*[:\-]?\s*([A-Z0-9]+)", t)
                 if m:
                     ine = m.group(1)
-                m = re.search(r"N[ée]e?\s+le\s*[:]?\s*(\d{1,2}\s+[^\d]+?\s+\d{4})(?:\s+à\s*[:]?\s*(.+))?", t, re.IGNORECASE)
+                m = re.search(r"N[ée]e?\s+le\s*[:]?(\d{1,2}\s+[^\d]+?\s+\d{4})(?:\s+à\s*[:]?(.+))?", t, re.IGNORECASE)
                 if m:
                     date_naissance = m.group(1).strip()
                     if m.group(2):
                         lieu_naissance = m.group(2).strip()
                 if lieu_naissance == "Inconnu":
-                    m2 = re.search(r"^à\s*[:]?\s*(.+)", t)
+                    m2 = re.search(r"^à\s*[:]?(.+)", t)
                     if m2:
                         lieu_naissance = m2.group(1).strip()
 
-            logging.info(f"Métadonnées '{os.path.basename(pdf_path)}' : Nom={nom_prenom}, Étudiant={num_etudiant}, INE={ine}, Naissance={date_naissance}, Lieu={lieu_naissance}")
+            logging.info(f"Métadonnées pour '{os.path.basename(pdf_path)}' : Nom={nom_prenom}, Étudiant={num_etudiant}, INE={ine}, Naissance={date_naissance}, Lieu={lieu_naissance}")
 
-            # Extraction du tableau de notes
-            table_notes = None
-            for table in all_tables:
-                header = [c.strip() if c else '' for c in table[0]]
-                if 'Note/Barème' in header:
-                    table_notes = table
-                    break
-            if not table_notes:
-                logging.warning(f"Table de notes introuvable dans '{os.path.basename(pdf_path)}'")
-                return
-
+            # Extraction du tableau de notes sur toutes les pages
             entetes = ['Matière','Note/Barème','Résultat','Session','Crédits']
             lignes = []
-            for row in table_notes[1:]:
-                if not row or not row[0] or not any(tag in row[0] for tag in ('UE','JR','JS','WR','WS','OPTIONS')):
-                    continue
-                mat = row[0].replace('\n',' ').strip()
-                note = row[1].strip() if len(row)>1 and row[1] else 'N/A'
-                res = row[2].strip() if len(row)>2 and row[2] else ''
-                sess = row[3].strip() if len(row)>3 and row[3] else ''
-                cr = row[4].strip() if len(row)>4 and row[4] else ''
-                lignes.append([mat,note,res,sess,cr])
+            for page in pdf.pages:
+                tables = page.extract_tables()
+                for table in tables:
+                    header = [c.strip() if c else '' for c in table[0]]
+                    if 'Note/Barème' in header:
+                        for row in table[1:]:
+                            if not row or not row[0] or not any(tag in row[0] for tag in ('UE','JR','JS','WR','WS','OPTIONS')):
+                                continue
+                            mat = row[0].replace('\n',' ').strip()
+                            note = row[1].strip() if len(row)>1 and row[1] else 'N/A'
+                            res = row[2].strip() if len(row)>2 and row[2] else ''
+                            sess = row[3].strip() if len(row)>3 and row[3] else ''
+                            cr = row[4].strip() if len(row)>4 and row[4] else ''
+                            lignes.append([mat,note,res,sess,cr])
+
+            if not lignes:
+                logging.warning(f"Aucune table de notes trouvée dans '{os.path.basename(pdf_path)}'")
+                return
 
             # Création du CSV
             safe = re.sub(r'[^a-zA-Z0-9]', '_', nom_prenom)
@@ -146,9 +145,8 @@ def main():
 
     # Collecte des fichiers PDF
     pdf_list = []
-    if os.path.isfile(args.pdf_file):
-        if args.pdf_file.lower().endswith('.pdf'):
-            pdf_list = [args.pdf_file]
+    if os.path.isfile(args.pdf_file) and args.pdf_file.lower().endswith('.pdf'):
+        pdf_list = [args.pdf_file]
     elif os.path.isdir(args.pdf_file):
         for fname in os.listdir(args.pdf_file):
             if fname.lower().endswith('.pdf'):
