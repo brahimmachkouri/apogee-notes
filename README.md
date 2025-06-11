@@ -39,7 +39,7 @@ Exemple d'utilisation :
 ```bash
 python3 split-pdf.py releves.pdf
 ```
-va scinder le pdf en autant de fichiers qu’il contient de pages dans le répertoire "original_pages".
+va scinder le pdf en autant de fichiers qu’il contient de pages dans le répertoire "releves_per_student".
 
 ```bash
 python3 notes2csv.py ./releves_per_student
