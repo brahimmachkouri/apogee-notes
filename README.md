@@ -1,5 +1,5 @@
 # apogee-notes
-Extraction des notes d'un PDF d'Apogee
+Extraction des notes d'un relevé PDF d'Apogee
 
 ```bash
 python3 split-pdf.py -h
